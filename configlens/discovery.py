@@ -1,8 +1,30 @@
 """DevOps configuration file discovery and category classification."""
 
+import fnmatch
 import os
 from pathlib import Path
-from configlens.models import Category
+from typing import List, Optional, Set
+from configlens.models import Category, DiscoveredFile
+
+# Common directories always ignored during scans
+DEFAULT_IGNORED_DIRS = {
+    ".git",
+    ".hg",
+    ".svn",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+    "node_modules",
+    ".venv",
+    "venv",
+    "env",
+    "dist",
+    "build",
+    ".tox",
+    ".idea",
+    ".vscode",
+}
 
 
 def is_github_actions_workflow(path: Path) -> bool:
@@ -86,7 +108,10 @@ def is_kubernetes(path: Path) -> bool:
     if path.suffix.lower() not in {".yml", ".yaml"}:
         return False
 
-    # Path heuristics
+    # Skip GitHub Actions and Compose
+    if is_github_actions_workflow(path) or is_docker_compose(path):
+        return False
+
     norm = path.as_posix().lower()
     in_k8s_dir = any(k in norm for k in ["/k8s/", "/kubernetes/", "/manifests/", "/helm/"])
 
@@ -124,3 +149,110 @@ def detect_category(path: Path) -> Category:
     if is_kubernetes(path):
         return Category.KUBERNETES
     return Category.UNKNOWN
+
+
+def parse_ignore_file(ignore_path: Path) -> List[str]:
+    """Parse ignore patterns from a gitignore or configlensignore file."""
+    patterns: List[str] = []
+    if not ignore_path.is_file():
+        return patterns
+
+    try:
+        with open(ignore_path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    patterns.append(line)
+    except (OSError, PermissionError):
+        pass
+    return patterns
+
+
+def should_ignore_path(rel_path: Path, patterns: List[str]) -> bool:
+    """Check if a relative path matches any ignore patterns."""
+    rel_str = rel_path.as_posix()
+    name = rel_path.name
+
+    for pattern in patterns:
+        clean_pat = pattern.rstrip("/")
+        # Exact match or glob match against basename
+        if fnmatch.fnmatch(name, clean_pat):
+            return True
+        # Match against full relative path
+        if fnmatch.fnmatch(rel_str, clean_pat) or fnmatch.fnmatch(rel_str, f"*/{clean_pat}"):
+            return True
+        if pattern.endswith("/") and fnmatch.fnmatch(f"{rel_str}/", f"*{clean_pat}/*"):
+            return True
+    return False
+
+
+def discover_files(
+    root: Path,
+    respect_gitignore: bool = True,
+) -> List[DiscoveredFile]:
+    """Recursively scan root directory and return classified DevOps configuration files."""
+    root = root.resolve()
+    if not root.exists():
+        return []
+
+    if root.is_file():
+        category = detect_category(root)
+        if category != Category.UNKNOWN:
+            return [
+                DiscoveredFile(
+                    path=root,
+                    category=category,
+                    relative_path=Path(root.name),
+                    size_bytes=root.stat().st_size,
+                )
+            ]
+        return []
+
+    # Load root gitignore patterns
+    ignore_patterns: List[str] = []
+    if respect_gitignore:
+        ignore_patterns.extend(parse_ignore_file(root / ".gitignore"))
+
+    discovered: List[DiscoveredFile] = []
+
+    for dirpath_str, dirnames, filenames in os.walk(root):
+        dirpath = Path(dirpath_str)
+        rel_dir = dirpath.relative_to(root)
+
+        # Prune ignored directories
+        dirnames[:] = [
+            d
+            for d in dirnames
+            if d not in DEFAULT_IGNORED_DIRS
+            and not (respect_gitignore and should_ignore_path(rel_dir / d, ignore_patterns))
+        ]
+
+        # Check for nested .gitignore
+        if respect_gitignore and (dirpath / ".gitignore").is_file():
+            ignore_patterns.extend(parse_ignore_file(dirpath / ".gitignore"))
+
+        for filename in filenames:
+            file_path = dirpath / filename
+            rel_file = file_path.relative_to(root)
+
+            if respect_gitignore and should_ignore_path(rel_file, ignore_patterns):
+                continue
+
+            category = detect_category(file_path)
+            if category != Category.UNKNOWN:
+                try:
+                    size = file_path.stat().st_size
+                except (OSError, PermissionError):
+                    size = 0
+
+                discovered.append(
+                    DiscoveredFile(
+                        path=file_path,
+                        category=category,
+                        relative_path=rel_file,
+                        size_bytes=size,
+                    )
+                )
+
+    discovered.sort(key=lambda f: f.relative_path.as_posix())
+    return discovered
