@@ -189,6 +189,8 @@ def should_ignore_path(rel_path: Path, patterns: List[str]) -> bool:
 def discover_files(
     root: Path,
     respect_gitignore: bool = True,
+    only: Optional[Set[Category]] = None,
+    ignore_file: Optional[Path] = None,
 ) -> List[DiscoveredFile]:
     """Recursively scan root directory and return classified DevOps configuration files."""
     root = root.resolve()
@@ -197,7 +199,7 @@ def discover_files(
 
     if root.is_file():
         category = detect_category(root)
-        if category != Category.UNKNOWN:
+        if category != Category.UNKNOWN and (only is None or category in only):
             return [
                 DiscoveredFile(
                     path=root,
@@ -208,10 +210,14 @@ def discover_files(
             ]
         return []
 
-    # Load root gitignore patterns
+    # Load ignore patterns
     ignore_patterns: List[str] = []
     if respect_gitignore:
         ignore_patterns.extend(parse_ignore_file(root / ".gitignore"))
+    if ignore_file and ignore_file.is_file():
+        ignore_patterns.extend(parse_ignore_file(ignore_file))
+    elif (root / ".configlensignore").is_file():
+        ignore_patterns.extend(parse_ignore_file(root / ".configlensignore"))
 
     discovered: List[DiscoveredFile] = []
 
@@ -224,7 +230,7 @@ def discover_files(
             d
             for d in dirnames
             if d not in DEFAULT_IGNORED_DIRS
-            and not (respect_gitignore and should_ignore_path(rel_dir / d, ignore_patterns))
+            and not should_ignore_path(rel_dir / d, ignore_patterns)
         ]
 
         # Check for nested .gitignore
@@ -235,24 +241,29 @@ def discover_files(
             file_path = dirpath / filename
             rel_file = file_path.relative_to(root)
 
-            if respect_gitignore and should_ignore_path(rel_file, ignore_patterns):
+            if should_ignore_path(rel_file, ignore_patterns):
                 continue
 
             category = detect_category(file_path)
-            if category != Category.UNKNOWN:
-                try:
-                    size = file_path.stat().st_size
-                except (OSError, PermissionError):
-                    size = 0
+            if category == Category.UNKNOWN:
+                continue
 
-                discovered.append(
-                    DiscoveredFile(
-                        path=file_path,
-                        category=category,
-                        relative_path=rel_file,
-                        size_bytes=size,
-                    )
+            if only is not None and category not in only:
+                continue
+
+            try:
+                size = file_path.stat().st_size
+            except (OSError, PermissionError):
+                size = 0
+
+            discovered.append(
+                DiscoveredFile(
+                    path=file_path,
+                    category=category,
+                    relative_path=rel_file,
+                    size_bytes=size,
                 )
+            )
 
     discovered.sort(key=lambda f: f.relative_path.as_posix())
     return discovered
