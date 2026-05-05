@@ -41,3 +41,29 @@ def is_dockerfile(path: Path) -> bool:
             pass
 
     return False
+
+
+def is_docker_compose(path: Path) -> bool:
+    """Check if the given path is a Docker Compose file.
+
+    Patterns: compose*.{yml,yaml}, docker-compose*.{yml,yaml}
+    """
+    name = path.name.lower()
+    if path.suffix.lower() not in {".yml", ".yaml"}:
+        return False
+
+    if name.startswith("docker-compose") or name.startswith("compose"):
+        return True
+
+    # Check top-level services: key for other YAML files
+    if path.is_file() and path.stat().st_size < 200_000:
+        try:
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped.startswith("services:"):
+                        return True
+        except (OSError, PermissionError):
+            pass
+
+    return False
