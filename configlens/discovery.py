@@ -76,3 +76,51 @@ def is_terraform(path: Path) -> bool:
     """
     suffix = path.suffix.lower()
     return suffix in {".tf", ".tfvars"}
+
+
+def is_kubernetes(path: Path) -> bool:
+    """Check if the given path is a Kubernetes manifest.
+
+    Patterns: YAML file containing apiVersion and kind keys, or located in k8s/ dirs.
+    """
+    if path.suffix.lower() not in {".yml", ".yaml"}:
+        return False
+
+    # Path heuristics
+    norm = path.as_posix().lower()
+    in_k8s_dir = any(k in norm for k in ["/k8s/", "/kubernetes/", "/manifests/", "/helm/"])
+
+    if path.is_file() and path.stat().st_size < 500_000:
+        try:
+            has_api_version = False
+            has_kind = False
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped.startswith("apiVersion:"):
+                        has_api_version = True
+                    elif stripped.startswith("kind:"):
+                        has_kind = True
+                    if has_api_version and has_kind:
+                        return True
+            if in_k8s_dir and (has_api_version or has_kind):
+                return True
+        except (OSError, PermissionError):
+            pass
+
+    return False
+
+
+def detect_category(path: Path) -> Category:
+    """Detect the DevOps category of a given file path."""
+    if is_github_actions_workflow(path):
+        return Category.GITHUB_ACTIONS
+    if is_dockerfile(path):
+        return Category.DOCKERFILE
+    if is_docker_compose(path):
+        return Category.DOCKER_COMPOSE
+    if is_terraform(path):
+        return Category.TERRAFORM
+    if is_kubernetes(path):
+        return Category.KUBERNETES
+    return Category.UNKNOWN
