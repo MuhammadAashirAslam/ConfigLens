@@ -67,3 +67,12 @@ def is_docker_compose(path: Path) -> bool:
             pass
 
     return False
+
+
+def is_terraform(path: Path) -> bool:
+    """Check if the given path is a Terraform configuration file.
+
+    Patterns: *.tf, *.tfvars
+    """
+    suffix = path.suffix.lower()
+    return suffix in {".tf", ".tfvars"}
