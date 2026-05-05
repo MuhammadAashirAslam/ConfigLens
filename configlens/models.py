@@ -1,6 +1,9 @@
 """Core domain models for ConfigLens."""
 
+from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict
 
 
 class Category(str, Enum):
@@ -25,3 +28,22 @@ class Category(str, Enum):
             Category.UNKNOWN: "Unknown",
         }
         return names.get(self, self.value)
+
+
+@dataclass(frozen=True)
+class DiscoveredFile:
+    """Represents a discovered DevOps configuration file in a repository."""
+
+    path: Path
+    category: Category
+    relative_path: Path
+    size_bytes: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert discovered file info to a dictionary."""
+        return {
+            "path": str(self.path),
+            "relative_path": str(self.relative_path),
+            "category": self.category.value,
+            "size_bytes": self.size_bytes,
+        }
