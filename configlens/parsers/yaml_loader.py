@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 from yaml.composer import Composer
 from yaml.constructor import SafeConstructor
+from yaml.error import YAMLError
 from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 from yaml.parser import Parser
 from yaml.reader import Reader
@@ -112,8 +113,17 @@ def load_yaml_with_line_numbers(content: str) -> Any:
     """Parse YAML string preserving line numbers on dictionaries and lists.
 
     Returns:
-        AnnotatedDict, AnnotatedList, or scalar value. Returns None for empty input.
+        AnnotatedDict, AnnotatedList, scalar value, or AnnotatedDict with '__parse_error__'
+        if the YAML is malformed. Never raises exceptions on malformed input.
     """
     if not content or not content.strip():
         return None
-    return yaml.load(content, Loader=LinePreservingSafeLoader)
+    try:
+        return yaml.load(content, Loader=LinePreservingSafeLoader)
+    except YAMLError as err:
+        err_dict = AnnotatedDict(
+            line_number=getattr(getattr(err, "problem_mark", None), "line", 0) + 1,
+            column=getattr(getattr(err, "problem_mark", None), "column", 0),
+        )
+        err_dict["__parse_error__"] = str(err)
+        return err_dict
