@@ -1,0 +1,19 @@
+name: Bad Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+permissions: write-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build project
+        uses: actions/checkout@v4
+
+      - name: Build project
+        run: npm install
+        env:
+          GITHUB_TOKEN: "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
