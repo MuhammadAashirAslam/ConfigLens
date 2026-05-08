@@ -8,7 +8,7 @@ from configlens.parsers.dockerfile_models import DockerfileParsed
 from configlens.rules.base import Rule, parse_inline_suppressions
 
 SENSITIVE_KEY_PATTERN = re.compile(
-    r"\b(password|secret|token|api[_-]?key|private[_-]?key|access[_-]?token|credentials?)\b",
+    r"(password|secret|token|api[_-]?key|private[_-]?key|access[_-]?token|credentials?)",
     re.IGNORECASE,
 )
 SAFE_PLACEHOLDERS = {"", "placeholder", "dummy", "example", "changeme", "none", "null"}
