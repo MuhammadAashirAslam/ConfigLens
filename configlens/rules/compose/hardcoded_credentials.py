@@ -8,7 +8,7 @@ from configlens.parsers.compose_models import ComposeFile
 from configlens.rules.base import Rule, parse_inline_suppressions
 
 SENSITIVE_KEY_PATTERN = re.compile(
-    r"\b(password|secret|token|api[_-]?key|private[_-]?key|auth)\b",
+    r"(password|secret|token|api[_-]?key|private[_-]?key|auth)",
     re.IGNORECASE,
 )
 SAFE_VALUES = {"", "placeholder", "dummy", "example", "changeme", "none", "null"}
