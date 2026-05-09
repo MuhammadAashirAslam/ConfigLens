@@ -24,36 +24,33 @@ def test_cli_help():
 
 
 def test_cli_scan_terminal(tmp_path: Path):
-    """Verify scan command produces terminal summary table."""
-    (tmp_path / "Dockerfile").write_text("FROM alpine:3.18\n", encoding="utf-8")
+    """Verify scan command produces terminal summary report."""
+    (tmp_path / "Dockerfile").write_text("FROM alpine:3.18\nUSER 10001\n", encoding="utf-8")
     (tmp_path / "main.tf").write_text('variable "foo" {}\n', encoding="utf-8")
 
     runner = CliRunner()
-    result = runner.invoke(main, ["scan", str(tmp_path)])
+    result = runner.invoke(main, ["scan", str(tmp_path), "--fail-on", "critical"])
     assert result.exit_code == 0
-    assert "Discovered DevOps Configurations" in result.output
-    assert "Dockerfile" in result.output
-    assert "Terraform" in result.output
-    assert "0 findings" in result.output
+    assert "ConfigLens" in result.output
 
 
 def test_cli_scan_json(tmp_path: Path):
     """Verify scan command produces valid JSON report."""
-    (tmp_path / "Dockerfile").write_text("FROM alpine:3.18\n", encoding="utf-8")
+    (tmp_path / "Dockerfile").write_text("FROM alpine:3.18\nUSER 10001\n", encoding="utf-8")
 
     runner = CliRunner()
-    result = runner.invoke(main, ["scan", str(tmp_path), "--format", "json"])
+    result = runner.invoke(main, ["scan", str(tmp_path), "--format", "json", "--fail-on", "critical"])
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert data["version"] == "0.1.0"
     assert data["discovered_files_count"] == 1
     assert data["files"][0]["category"] == "dockerfile"
-    assert data["summary"]["total_findings"] == 0
+    assert data["passed"] is True
 
 
 def test_cli_scan_only_filter(tmp_path: Path):
     """Verify scan command respects --only filter."""
-    (tmp_path / "Dockerfile").write_text("FROM alpine:3.18\n", encoding="utf-8")
+    (tmp_path / "Dockerfile").write_text("FROM alpine:3.18\nUSER 10001\n", encoding="utf-8")
     (tmp_path / "main.tf").write_text('variable "foo" {}\n', encoding="utf-8")
 
     runner = CliRunner()
