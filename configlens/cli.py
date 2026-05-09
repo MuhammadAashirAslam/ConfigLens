@@ -1,17 +1,25 @@
-"""CLI entrypoint and commands for ConfigLens."""
+"""CLI entrypoint and scan command for ConfigLens."""
 
-import json
+import sys
 from pathlib import Path
-from typing import Optional, Set
+from typing import Any, List, Optional, Set
 import click
-from rich.console import Console
-from rich.table import Table
 
 from configlens import __version__
+from configlens.config import ConfigLensConfig
 from configlens.discovery import discover_files
-from configlens.models import Category
-
-console = Console()
+from configlens.models import Category, Finding, Severity
+from configlens.parsers import (
+    parse_compose_file,
+    parse_dockerfile_file,
+    parse_workflow_file,
+)
+from configlens.reporters import (
+    render_json_report,
+    render_terminal_report,
+)
+import configlens.rules  # Ensures all rules are registered
+from configlens.rules.registry import default_registry
 
 
 @click.group()
@@ -19,6 +27,65 @@ console = Console()
 def main() -> None:
     """ConfigLens: Static Analysis & Technical Debt Detection for DevOps Configuration."""
     pass
+
+
+def execute_scan(
+    target_path: Path,
+    only_categories: Optional[Set[Category]] = None,
+    ignore_file: Optional[Path] = None,
+    config: Optional[ConfigLensConfig] = None,
+) -> tuple[list, list[Finding]]:
+    """Scan directory and run all active rules against discovered DevOps configurations."""
+    cfg = config or ConfigLensConfig.load(root_dir=target_path)
+    discovered_files = discover_files(target_path, only=only_categories, ignore_file=ignore_file)
+
+    all_findings: List[Finding] = []
+
+    for df in discovered_files:
+        rules = default_registry.get_rules_for_category(df.category)
+        if not rules:
+            continue
+
+        # Parse file according to category
+        parsed_content: Any = None
+        if df.category == Category.GITHUB_ACTIONS:
+            parsed_content = parse_workflow_file(df.path)
+        elif df.category == Category.DOCKERFILE:
+            parsed_content = parse_dockerfile_file(df.path)
+        elif df.category == Category.DOCKER_COMPOSE:
+            parsed_content = parse_compose_file(df.path)
+
+        if parsed_content is None:
+            continue
+
+        for rule in rules:
+            if not cfg.is_rule_enabled(rule.id):
+                continue
+
+            findings = rule.check(df.path, parsed_content)
+            # Check for severity override from config
+            effective_sev = cfg.get_severity(rule.id, rule.severity)
+            if effective_sev != rule.severity:
+                findings = [
+                    Finding(
+                        rule_id=f.rule_id,
+                        title=f.title,
+                        severity=effective_sev,
+                        category=f.category,
+                        file_path=f.file_path,
+                        line_number=f.line_number,
+                        message=f.message,
+                        suggested_fix=f.suggested_fix,
+                        column=f.column,
+                    )
+                    for f in findings
+                ]
+
+            all_findings.extend(findings)
+
+    # Deterministic sort by file relative path, line number, rule_id
+    all_findings.sort(key=lambda x: (str(x.file_path), x.line_number, x.rule_id))
+    return discovered_files, all_findings
 
 
 @main.command(name="scan")
@@ -65,50 +132,22 @@ def scan_command(
             try:
                 only_categories.add(Category(cat_str))
             except ValueError:
-                console.print(f"[yellow]Warning:[/yellow] Unknown category '{cat_str}' ignored.")
+                click.echo(f"Warning: Unknown category '{cat_str}' ignored.", err=True)
 
-    files = discover_files(path, only=only_categories, ignore_file=ignore_file)
+    fail_on_severity = Severity(fail_on.lower())
+    files, findings = execute_scan(path, only_categories=only_categories, ignore_file=ignore_file)
 
     if output_format == "json":
-        report = {
-            "version": __version__,
-            "target": str(path.resolve()),
-            "discovered_files_count": len(files),
-            "files": [f.to_dict() for f in files],
-            "findings": [],
-            "summary": {
-                "total_findings": 0,
-                "critical": 0,
-                "high": 0,
-                "medium": 0,
-                "low": 0,
-            },
-        }
-        click.echo(json.dumps(report, indent=2))
-        return
+        json_str = render_json_report(path, files, findings, fail_on_severity)
+        click.echo(json_str)
+        # Check if threshold violated
+        threshold_rank = fail_on_severity.rank
+        has_violations = any(f.severity.rank >= threshold_rank for f in findings)
+        sys.exit(1 if has_violations else 0)
 
     # Terminal output
-    console.print(f"\n[bold cyan]ConfigLens[/bold cyan] v{__version__} — Scanning [bold]{path.resolve()}[/bold]\n")
-
-    if not files:
-        console.print("[yellow]No supported DevOps configuration files discovered.[/yellow]\n")
-        return
-
-    table = Table(title="Discovered DevOps Configurations", show_header=True, header_style="bold magenta")
-    table.add_column("Category", style="cyan", width=20)
-    table.add_column("File Path", style="green")
-    table.add_column("Size", justify="right", style="dim")
-
-    # Group files by category
-    category_counts: dict[str, int] = {}
-    for f in files:
-        cat_name = f.category.display_name
-        category_counts[cat_name] = category_counts.get(cat_name, 0) + 1
-        size_str = f"{f.size_bytes} B" if f.size_bytes < 1024 else f"{f.size_bytes / 1024:.1f} KB"
-        table.add_row(cat_name, f.relative_path.as_posix(), size_str)
-
-    console.print(table)
-    console.print(f"\n[bold green]Summary:[/bold green] Discovered {len(files)} config files across {len(category_counts)} categories (0 findings).\n")
+    exit_code = render_terminal_report(path, files, findings, fail_on_severity)
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

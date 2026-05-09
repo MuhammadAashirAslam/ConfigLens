@@ -41,10 +41,23 @@ def is_github_actions_workflow(path: Path) -> bool:
 def is_dockerfile(path: Path) -> bool:
     """Check if the given path is a Dockerfile by name or content inspection.
 
-    Patterns: Dockerfile*, *.dockerfile, Containerfile*
+    Patterns: Dockerfile, Dockerfile.*, *.dockerfile, Containerfile, Containerfile.*
     """
+    # Exclude common non-container extensions
+    if path.suffix.lower() in {
+        ".py", ".sh", ".md", ".json", ".txt", ".yaml", ".yml",
+        ".tf", ".tfvars", ".toml", ".xml", ".html", ".js", ".ts",
+    }:
+        return False
+
     name = path.name.lower()
-    if name.startswith("dockerfile") or name.endswith(".dockerfile") or name.startswith("containerfile"):
+    if (
+        name == "dockerfile"
+        or name.startswith("dockerfile.")
+        or name.endswith(".dockerfile")
+        or name == "containerfile"
+        or name.startswith("containerfile.")
+    ):
         return True
 
     # Content heuristic if small file and extensionless or unknown
