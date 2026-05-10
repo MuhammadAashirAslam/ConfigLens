@@ -1,0 +1,61 @@
+name: 'ConfigLens Action'
+description: 'Static Analysis & Technical Debt Detection for DevOps Configuration (GitHub Actions, Dockerfile, Compose, Terraform, Kubernetes)'
+author: 'Muhammad Aashir Aslam'
+branding:
+  icon: 'search'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'Path or directory to scan'
+    required: false
+    default: '.'
+  fail-on:
+    description: 'Minimum severity threshold to exit with non-zero status (low, medium, high, critical)'
+    required: false
+    default: 'high'
+  only:
+    description: 'Comma-separated categories to scan (e.g. github-actions,dockerfile,terraform)'
+    required: false
+    default: ''
+  ignore:
+    description: 'Path to custom ignore file'
+    required: false
+    default: ''
+  format:
+    description: 'Output report format (terminal or json)'
+    required: false
+    default: 'terminal'
+
+outputs:
+  report:
+    description: 'JSON report output when format is set to json'
+    value: ${{ steps.scan.outputs.report }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install ConfigLens
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
+
+    - name: Run ConfigLens Scan
+      id: scan
+      shell: bash
+      run: |
+        CMD="configlens scan ${{ inputs.path }} --fail-on ${{ inputs.fail-on }} --format ${{ inputs.format }}"
+        if [ -n "${{ inputs.only }}" ]; then
+          CMD="$CMD --only ${{ inputs.only }}"
+        fi
+        if [ -n "${{ inputs.ignore }}" ]; then
+          CMD="$CMD --ignore ${{ inputs.ignore }}"
+        fi
+        echo "Executing: $CMD"
+        $CMD
