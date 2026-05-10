@@ -1,0 +1,8 @@
+- id: configlens
+  name: ConfigLens
+  description: Static Analysis & Technical Debt Detection for DevOps Configuration
+  entry: configlens scan
+  language: python
+  types: [text]
+  files: ^(.*Dockerfile.*|\.github/workflows/.*|.*compose.*\.ya?ml|.*\.tf|.*\.tfvars)$
+  pass_filenames: false
