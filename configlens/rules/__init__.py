@@ -14,6 +14,7 @@ from configlens.rules.registry import (
 import configlens.rules.compose  # noqa: F401
 import configlens.rules.dockerfile  # noqa: F401
 import configlens.rules.github_actions  # noqa: F401
+import configlens.rules.terraform  # noqa: F401
 
 __all__ = [
     "Rule",
