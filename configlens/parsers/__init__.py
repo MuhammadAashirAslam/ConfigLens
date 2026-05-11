@@ -14,6 +14,11 @@ from configlens.parsers.dockerfile_parser import (
     parse_dockerfile_content,
     parse_dockerfile_file,
 )
+from configlens.parsers.terraform_models import TerraformBlock, TerraformFile
+from configlens.parsers.terraform_parser import (
+    parse_terraform_content,
+    parse_terraform_file,
+)
 from configlens.parsers.workflow_models import (
     WorkflowFile,
     WorkflowJob,
@@ -47,4 +52,8 @@ __all__ = [
     "DockerfileParsed",
     "parse_dockerfile_content",
     "parse_dockerfile_file",
+    "TerraformBlock",
+    "TerraformFile",
+    "parse_terraform_content",
+    "parse_terraform_file",
 ]
