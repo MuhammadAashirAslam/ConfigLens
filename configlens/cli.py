@@ -12,6 +12,7 @@ from configlens.models import Category, Finding, Severity
 from configlens.parsers import (
     parse_compose_file,
     parse_dockerfile_file,
+    parse_terraform_file,
     parse_workflow_file,
 )
 from configlens.reporters import (
@@ -54,6 +55,8 @@ def execute_scan(
             parsed_content = parse_dockerfile_file(df.path)
         elif df.category == Category.DOCKER_COMPOSE:
             parsed_content = parse_compose_file(df.path)
+        elif df.category == Category.TERRAFORM:
+            parsed_content = parse_terraform_file(df.path)
 
         if parsed_content is None:
             continue
