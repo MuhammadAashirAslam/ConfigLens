@@ -127,3 +127,23 @@ def load_yaml_with_line_numbers(content: str) -> Any:
         )
         err_dict["__parse_error__"] = str(err)
         return err_dict
+
+
+def load_all_yaml_with_line_numbers(content: str) -> List[Any]:
+    """Parse multi-document YAML string preserving line numbers on each document.
+
+    Returns:
+        List of parsed documents (AnnotatedDict, AnnotatedList, etc.).
+    """
+    if not content or not content.strip():
+        return []
+    try:
+        docs = list(yaml.load_all(content, Loader=LinePreservingSafeLoader))
+        return [d for d in docs if d is not None]
+    except YAMLError as err:
+        err_dict = AnnotatedDict(
+            line_number=getattr(getattr(err, "problem_mark", None), "line", 0) + 1,
+            column=getattr(getattr(err, "problem_mark", None), "column", 0),
+        )
+        err_dict["__parse_error__"] = str(err)
+        return [err_dict]

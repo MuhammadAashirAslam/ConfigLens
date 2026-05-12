@@ -14,6 +14,11 @@ from configlens.parsers.dockerfile_parser import (
     parse_dockerfile_content,
     parse_dockerfile_file,
 )
+from configlens.parsers.k8s_models import K8sContainer, K8sDocument, K8sManifestFile
+from configlens.parsers.k8s_parser import (
+    parse_k8s_content,
+    parse_k8s_file,
+)
 from configlens.parsers.terraform_models import TerraformBlock, TerraformFile
 from configlens.parsers.terraform_parser import (
     parse_terraform_content,
@@ -31,6 +36,7 @@ from configlens.parsers.workflow_parser import (
 from configlens.parsers.yaml_loader import (
     AnnotatedDict,
     AnnotatedList,
+    load_all_yaml_with_line_numbers,
     load_yaml_with_line_numbers,
 )
 
@@ -38,6 +44,7 @@ __all__ = [
     "AnnotatedDict",
     "AnnotatedList",
     "load_yaml_with_line_numbers",
+    "load_all_yaml_with_line_numbers",
     "WorkflowFile",
     "WorkflowJob",
     "WorkflowStep",
@@ -56,4 +63,9 @@ __all__ = [
     "TerraformFile",
     "parse_terraform_content",
     "parse_terraform_file",
+    "K8sContainer",
+    "K8sDocument",
+    "K8sManifestFile",
+    "parse_k8s_content",
+    "parse_k8s_file",
 ]
