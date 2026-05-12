@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insecure-workload
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: insecure-workload
+    spec:
+      containers:
+        - name: web
+          image: nginx:latest
