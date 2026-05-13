@@ -29,9 +29,9 @@ def parse_inline_suppressions(file_path: Path) -> Dict[int, Set[str]]:
                     parts = line.split(SUPPRESSION_PREFIX, 1)[1].strip()
                     rule_ids: Set[str] = set()
                     if parts.startswith(":"):
-                        raw_rules = parts[1:].split()
-                        if raw_rules:
-                            rule_ids = {r.strip(",").lower() for r in raw_rules[0].split(",")}
+                        rule_content = parts[1:].strip()
+                        if rule_content:
+                            rule_ids = {r.strip().lower() for r in rule_content.split(",") if r.strip()}
                     suppressions[line_num] = rule_ids
     except (OSError, PermissionError):
         pass
@@ -59,8 +59,8 @@ class Rule(ABC):
         line_number: int,
     ) -> bool:
         """Check if finding on line_number is suppressed for this rule."""
-        # Check current line and line directly above (preceding comment)
-        for check_line in (line_number, line_number - 1):
+        # Check file-level (line 1), current line, and line directly above (preceding comment)
+        for check_line in (1, line_number, line_number - 1):
             if check_line in suppressions:
                 rule_set = suppressions[check_line]
                 if not rule_set or self.id.lower() in rule_set or "*" in rule_set:

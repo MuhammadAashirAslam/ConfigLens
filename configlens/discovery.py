@@ -30,11 +30,32 @@ DEFAULT_IGNORED_DIRS = {
 def is_github_actions_workflow(path: Path) -> bool:
     """Check if the given path is a GitHub Actions workflow file.
 
-    Pattern: .github/workflows/*.{yml,yaml}
+    Pattern: .github/workflows/*.{yml,yaml} or content with top-level on and jobs.
     """
-    norm = path.as_posix()
-    if "/.github/workflows/" in norm or norm.startswith(".github/workflows/"):
-        return path.suffix.lower() in {".yml", ".yaml"}
+    if path.suffix.lower() not in {".yml", ".yaml"}:
+        return False
+
+    norm = path.as_posix().lower()
+    if "/.github/workflows/" in norm or norm.startswith(".github/workflows/") or "/github_actions/" in norm:
+        return True
+
+    # Content heuristic if small YAML file
+    if path.is_file() and path.stat().st_size < 200_000:
+        try:
+            has_on = False
+            has_jobs = False
+            with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped.startswith("on:") or stripped.startswith("'on':") or stripped.startswith('"on":'):
+                        has_on = True
+                    elif stripped.startswith("jobs:"):
+                        has_jobs = True
+                    if has_on and has_jobs:
+                        return True
+        except (OSError, PermissionError):
+            pass
+
     return False
 
 
