@@ -18,6 +18,7 @@ from configlens.parsers import (
 )
 from configlens.reporters import (
     render_json_report,
+    render_sarif_report,
     render_terminal_report,
 )
 import configlens.rules  # Ensures all rules are registered
@@ -112,7 +113,7 @@ def execute_scan(
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["terminal", "json"], case_sensitive=False),
+    type=click.Choice(["terminal", "json", "sarif"], case_sensitive=False),
     default="terminal",
     help="Output report format.",
 )
@@ -147,6 +148,13 @@ def scan_command(
         json_str = render_json_report(path, files, findings, fail_on_severity)
         click.echo(json_str)
         # Check if threshold violated
+        threshold_rank = fail_on_severity.rank
+        has_violations = any(f.severity.rank >= threshold_rank for f in findings)
+        sys.exit(1 if has_violations else 0)
+
+    if output_format == "sarif":
+        sarif_str = render_sarif_report(path, files, findings, fail_on_severity)
+        click.echo(sarif_str)
         threshold_rank = fail_on_severity.rank
         has_violations = any(f.severity.rank >= threshold_rank for f in findings)
         sys.exit(1 if has_violations else 0)
