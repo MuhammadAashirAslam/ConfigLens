@@ -1,0 +1,53 @@
+{
+  "version": "0.1.0",
+  "summary": {
+    "files_scanned": 5,
+    "findings_count": 4,
+    "critical": 1,
+    "high": 2,
+    "medium": 1,
+    "low": 0
+  },
+  "findings": [
+    {
+      "rule_id": "dockerfile-running-as-root",
+      "title": "Container running as root",
+      "severity": "critical",
+      "category": "dockerfile",
+      "file": "Dockerfile",
+      "line": 14,
+      "message": "Dockerfile does not specify a non-root USER instruction.",
+      "suggested_fix": "Add 'USER <non-root-user>' before CMD or ENTRYPOINT."
+    },
+    {
+      "rule_id": "tf-missing-prevent-destroy",
+      "title": "Missing prevent_destroy lifecycle protection on stateful resource",
+      "severity": "high",
+      "category": "terraform",
+      "file": "infra/database.tf",
+      "line": 10,
+      "message": "Stateful resource 'aws_db_instance.production_db' does not have 'lifecycle { prevent_destroy = true }' configured.",
+      "suggested_fix": "Add 'lifecycle { prevent_destroy = true }' block inside the 'aws_db_instance' declaration."
+    },
+    {
+      "rule_id": "k8s-missing-resource-limits",
+      "title": "Missing container resource limits",
+      "severity": "high",
+      "category": "kubernetes",
+      "file": "k8s/deployment.yaml",
+      "line": 20,
+      "message": "Container 'api' in Deployment 'web-service' is missing CPU and/or memory resource limits.",
+      "suggested_fix": "Specify 'resources.limits.cpu' and 'resources.limits.memory' for container 'api'."
+    },
+    {
+      "rule_id": "gha-missing-caching",
+      "title": "Missing dependency caching",
+      "severity": "medium",
+      "category": "github-actions",
+      "file": ".github/workflows/ci.yml",
+      "line": 18,
+      "message": "Step 'Setup Node.js' uses actions/setup-node@v4 without caching enabled.",
+      "suggested_fix": "Add 'with: cache: npm' to cache dependencies and speed up CI runs."
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "ConfigLens",
+          "version": "0.1.0",
+          "informationUri": "https://github.com/MuhammadAashirAslam/ConfigLens",
+          "rules": [
+            {
+              "id": "dockerfile-running-as-root",
+              "name": "DockerfileRunningAsRoot",
+              "shortDescription": {
+                "text": "Container running as root"
+              },
+              "fullDescription": {
+                "text": "Container running as root"
+              },
+              "help": {
+                "text": "Add 'USER <non-root-user>' before CMD or ENTRYPOINT.",
+                "markdown": "**Suggested Fix:** Add 'USER <non-root-user>' before CMD or ENTRYPOINT."
+              },
+              "properties": {
+                "category": "dockerfile",
+                "defaultSeverity": "critical",
+                "tags": [
+                  "DevOps",
+                  "TechnicalDebt",
+                  "dockerfile"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "dockerfile-running-as-root",
+          "level": "error",
+          "message": {
+            "text": "Dockerfile does not specify a non-root USER instruction."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "fixes": [
+            {
+              "description": {
+                "text": "Add 'USER <non-root-user>' before CMD or ENTRYPOINT."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
