@@ -57,6 +57,26 @@ def test_multiple_run_layers_rule():
     assert findings[0].rule_id == "dockerfile-multiple-run-layers"
 
 
+def test_multiple_run_layers_multi_stage_builder_caching():
+    """Verify consecutive RUN instructions in intermediate builder stage are permitted for caching."""
+    from configlens.parsers.dockerfile_parser import parse_dockerfile_content
+
+    multi_stage = """FROM golang:1.22 AS builder
+WORKDIR /src
+RUN go mod download
+RUN go build -o /bin/app .
+
+FROM alpine:3.19
+USER appuser
+COPY --from=builder /bin/app /bin/app
+CMD ["/bin/app"]
+"""
+    parsed = parse_dockerfile_content(multi_stage)
+    rule = MultipleRunLayersRule()
+    findings = rule.check(Path("Dockerfile"), parsed)
+    assert len(findings) == 0
+
+
 def test_missing_healthcheck_rule():
     """Verify missing healthcheck rule triggers when CMD exists without HEALTHCHECK."""
     rule = MissingHealthcheckRule()

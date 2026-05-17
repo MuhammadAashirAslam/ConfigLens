@@ -21,7 +21,13 @@ class MultipleRunLayersRule(Rule):
         findings: List[Finding] = []
         suppressions = parse_inline_suppressions(file_path)
 
-        for stage in parsed.stages:
+        for idx, stage in enumerate(parsed.stages):
+            # In multi-stage builds, intermediate builder stages (not the final stage) often
+            # deliberately separate dependency installation from compilation for layer caching.
+            is_intermediate = (idx < len(parsed.stages) - 1) and bool(stage.name)
+            if is_intermediate:
+                continue
+
             prev_was_run = False
             for inst in stage.instructions:
                 if inst.instruction == "RUN":
