@@ -138,8 +138,13 @@ def load_all_yaml_with_line_numbers(content: str) -> List[Any]:
     if not content or not content.strip():
         return []
     try:
-        docs = list(yaml.load_all(content, Loader=LinePreservingSafeLoader))
-        return [d for d in docs if d is not None]
+        loader = LinePreservingSafeLoader(content)
+        docs: List[Any] = []
+        while loader.check_data():
+            doc = loader.get_data()
+            if doc is not None:
+                docs.append(doc)
+        return docs
     except YAMLError as err:
         err_dict = AnnotatedDict(
             line_number=getattr(getattr(err, "problem_mark", None), "line", 0) + 1,

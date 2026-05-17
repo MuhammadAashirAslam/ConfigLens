@@ -110,3 +110,13 @@ def test_parse_workflow_malformed():
     wf = parse_workflow_content(bad_wf)
     assert wf.line_number >= 1
     assert len(wf.jobs) == 0
+
+
+def test_load_all_yaml_with_empty_documents():
+    """Verify loading multi-doc streams with empty docs and comment dividers."""
+    from configlens.parsers.yaml_loader import load_all_yaml_with_line_numbers
+
+    stream = "---\n# Just a comment\n---\nkind: Service\nmetadata:\n  name: my-svc\n---\n---\n"
+    docs = load_all_yaml_with_line_numbers(stream)
+    assert len(docs) == 1
+    assert docs[0]["kind"] == "Service"
