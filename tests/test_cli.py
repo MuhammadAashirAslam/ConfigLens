@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 from click.testing import CliRunner
+from configlens import __version__
 from configlens.cli import main
 
 
@@ -11,7 +12,7 @@ def test_cli_version():
     runner = CliRunner()
     result = runner.invoke(main, ["--version"])
     assert result.exit_code == 0
-    assert "configlens, version 0.1.0" in result.output
+    assert f"configlens, version {__version__}" in result.output
 
 
 def test_cli_help():
@@ -42,7 +43,7 @@ def test_cli_scan_json(tmp_path: Path):
     result = runner.invoke(main, ["scan", str(tmp_path), "--format", "json", "--fail-on", "critical"])
     assert result.exit_code == 0
     data = json.loads(result.output)
-    assert data["version"] == "0.1.0"
+    assert data["version"] == __version__
     assert data["discovered_files_count"] == 1
     assert data["files"][0]["category"] == "dockerfile"
     assert data["passed"] is True

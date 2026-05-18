@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] — 2026-05-18
+
+### Added
+- **25+ Rule Milestone Reached**: Expanded rule catalog to 26 static analysis rules spanning all 5 DevOps domains.
+- **Rule Pack Presets**:
+  - Added `--preset` CLI option supporting `security`, `debt`, and `all` rule packs.
+  - Configuration support for `preset: security` / `preset: debt` in `.configlens.yml`.
+- **Kubernetes Privileged Container Detection**:
+  - Added `k8s-privileged-container` (CRITICAL) rule preventing host root escalation.
+- **Tuned Heuristics**:
+  - Allowed consecutive `RUN` instructions in intermediate Dockerfile builder stages for optimal build caching.
+  - Hardened multi-document YAML stream loader to handle empty documents and comment separators.
+
+---
+
 ## [0.1.0] — 2026-05-16
 
 ### Added

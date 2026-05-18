@@ -4,8 +4,8 @@ import configlens
 
 
 def test_version():
-    """Verify package version is set to 0.1.0."""
-    assert configlens.__version__ == "0.1.0"
+    """Verify package version is set to 0.2.0."""
+    assert configlens.__version__ == "0.2.0"
 
 
 def test_author():

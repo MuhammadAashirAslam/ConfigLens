@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "configlens"
-version = "0.1.0"
+version = "0.2.0"
 description = "Static analysis & technical debt detection for DevOps configuration"
 readme = "README.md"
 requires-python = ">=3.10"
