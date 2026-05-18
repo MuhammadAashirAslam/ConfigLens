@@ -95,3 +95,22 @@ ignore:
     assert cfg.get_severity("unknown-rule", Severity.LOW) == Severity.LOW
     assert cfg.fail_on == Severity.HIGH
     assert "*.tmp" in cfg.ignore_patterns
+
+
+def test_config_presets():
+    """Verify security and debt presets filter rules appropriately."""
+    sec_cfg = ConfigLensConfig(preset="security")
+    assert sec_cfg.is_rule_enabled("dockerfile-running-as-root") is True
+    assert sec_cfg.is_rule_enabled("dockerfile-multiple-run-layers") is False
+
+    debt_cfg = ConfigLensConfig(preset="debt")
+    assert debt_cfg.is_rule_enabled("dockerfile-multiple-run-layers") is True
+    assert debt_cfg.is_rule_enabled("dockerfile-running-as-root") is False
+
+    # Explicit rule config overrides preset
+    from configlens.config import RuleConfig
+    override_cfg = ConfigLensConfig(
+        preset="security",
+        rules={"dockerfile-multiple-run-layers": RuleConfig(enabled=True)},
+    )
+    assert override_cfg.is_rule_enabled("dockerfile-multiple-run-layers") is True

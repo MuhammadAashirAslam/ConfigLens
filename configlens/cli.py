@@ -37,9 +37,12 @@ def execute_scan(
     only_categories: Optional[Set[Category]] = None,
     ignore_file: Optional[Path] = None,
     config: Optional[ConfigLensConfig] = None,
+    preset: Optional[str] = None,
 ) -> tuple[list, list[Finding]]:
     """Scan directory and run all active rules against discovered DevOps configurations."""
     cfg = config or ConfigLensConfig.load(root_dir=target_path)
+    if preset and preset != "all":
+        cfg.preset = preset.lower()
     discovered_files = discover_files(target_path, only=only_categories, ignore_file=ignore_file)
 
     all_findings: List[Finding] = []
@@ -123,12 +126,19 @@ def execute_scan(
     default="high",
     help="Minimum severity threshold to exit with non-zero status code.",
 )
+@click.option(
+    "--preset",
+    type=click.Choice(["all", "security", "debt"], case_sensitive=False),
+    default="all",
+    help="Filter active rules by rule pack preset (security, debt, or all).",
+)
 def scan_command(
     path: Path,
     only: Optional[str],
     ignore_file: Optional[Path],
     output_format: str,
     fail_on: str,
+    preset: str,
 ) -> None:
     """Scan a repository or directory for DevOps configuration files and debt."""
     only_categories: Optional[Set[Category]] = None
@@ -142,7 +152,12 @@ def scan_command(
                 click.echo(f"Warning: Unknown category '{cat_str}' ignored.", err=True)
 
     fail_on_severity = Severity(fail_on.lower())
-    files, findings = execute_scan(path, only_categories=only_categories, ignore_file=ignore_file)
+    files, findings = execute_scan(
+        path,
+        only_categories=only_categories,
+        ignore_file=ignore_file,
+        preset=preset,
+    )
 
     if output_format == "json":
         json_str = render_json_report(path, files, findings, fail_on_severity)

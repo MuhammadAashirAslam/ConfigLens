@@ -15,6 +15,39 @@ class RuleConfig:
     severity: Optional[Severity] = None
 
 
+PRESET_SECURITY = {
+    "gha-unpinned-action-version",
+    "gha-broad-permissions",
+    "gha-hardcoded-secret",
+    "dockerfile-running-as-root",
+    "dockerfile-baked-secrets",
+    "dockerfile-latest-tag",
+    "compose-hardcoded-credentials",
+    "compose-broad-ports",
+    "compose-latest-tag",
+    "tf-hardcoded-secret",
+    "tf-unpinned-provider",
+    "k8s-root-container",
+    "k8s-latest-image-tag",
+    "k8s-privileged-container",
+}
+
+PRESET_DEBT = {
+    "gha-duplicate-setup-steps",
+    "gha-missing-caching",
+    "gha-missing-job-timeout",
+    "dockerfile-multiple-run-layers",
+    "dockerfile-missing-dockerignore",
+    "dockerfile-missing-healthcheck",
+    "dockerfile-uncached-pkg-manager",
+    "compose-missing-restart",
+    "tf-missing-prevent-destroy",
+    "tf-unused-variables",
+    "k8s-missing-resource-limits",
+    "k8s-missing-probes",
+}
+
+
 @dataclass
 class ConfigLensConfig:
     """Global configuration parsed from .configlens.yml."""
@@ -22,12 +55,22 @@ class ConfigLensConfig:
     rules: Dict[str, RuleConfig] = field(default_factory=dict)
     ignore_patterns: List[str] = field(default_factory=list)
     fail_on: Optional[Severity] = None
+    preset: Optional[str] = None
 
     def is_rule_enabled(self, rule_id: str) -> bool:
-        """Check if a rule is enabled in the configuration."""
+        """Check if a rule is enabled in the configuration and active preset."""
         key = rule_id.lower()
+
+        # Individual rule overrides in config always take highest priority
         if key in self.rules:
             return self.rules[key].enabled
+
+        # Apply preset filtering if active
+        if self.preset == "security":
+            return key in PRESET_SECURITY
+        if self.preset == "debt":
+            return key in PRESET_DEBT
+
         return True
 
     def get_severity(self, rule_id: str, default: Severity) -> Severity:
@@ -90,4 +133,7 @@ class ConfigLensConfig:
             except ValueError:
                 fail_on = None
 
-        return cls(rules=rules, ignore_patterns=ignore_patterns, fail_on=fail_on)
+        preset_raw = data.get("preset")
+        preset = str(preset_raw).lower() if preset_raw else None
+
+        return cls(rules=rules, ignore_patterns=ignore_patterns, fail_on=fail_on, preset=preset)
