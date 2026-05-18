@@ -72,6 +72,30 @@ def test_k8s_latest_image_tag_rule():
     assert "nginx:latest" in findings[0].message
 
 
+def test_k8s_privileged_container_rule():
+    """Verify rule triggers when container runs in privileged mode."""
+    from configlens.parsers.k8s_parser import parse_k8s_content
+    from configlens.rules.kubernetes.privileged_container import K8sPrivilegedContainerRule
+
+    rule = K8sPrivilegedContainerRule()
+    priv_manifest = """apiVersion: v1
+kind: Pod
+metadata:
+  name: priv-pod
+spec:
+  containers:
+    - name: agent
+      image: agent:1.0
+      securityContext:
+        privileged: true
+"""
+    parsed = parse_k8s_content(priv_manifest)
+    findings = rule.check(Path("pod.yaml"), parsed)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "k8s-privileged-container"
+    assert "privileged mode" in findings[0].message
+
+
 def test_k8s_cli_scan_integration():
     """Verify execute_scan detects and analyzes Kubernetes manifests."""
     files, findings = execute_scan(FIXTURES_DIR, only_categories={Category.KUBERNETES})
